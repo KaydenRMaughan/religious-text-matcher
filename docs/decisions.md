@@ -25,3 +25,19 @@
 - PCA refit on every query: the projection is now fit once at load.
 
 **Out of scope:** RAG and LLM generation (that's the separate Conference Compass idea), UMAP, and any further scraping.
+
+## 2026-10-29: Data pipeline
+
+**Requirements pinned on Python 3.14** (Windows, CPU). Direct dependencies only, plus `torch`, which is the heaviest and most version-sensitive transitive dependency. The package installs editable (`pip install -e .`) from a `src/` layout.
+
+**Fetch, don't commit.** `scripts/fetch_data.py` downloads the two Gutenberg texts and the OpenBible.info zip into `data/raw/`, skips files already present, waits a second between hosts' requests, and writes `SOURCES.json` with URL, date and SHA-256 so a later run can tell whether the upstream files changed.
+
+**Verse parsing rules** (`src/rtm/corpus.py`), learned from the files rather than assumed:
+- Verses are paragraphs starting `c:v`, but some verses start mid-paragraph, so each paragraph is split on the `c:v` pattern.
+- The source often breaks a verse's last sentence onto its own paragraph ("Selah.", "Amen."; Genesis 31:48 has a stray break mid-verse). A paragraph that doesn't start with `c:v` therefore attaches to the previous verse. The first draft dropped these and would have truncated 114 verses.
+- Dropped: anything before a book's first verse (titles, "Otherwise Called:", Book of Mormon book summaries), chapter labels ("1 Nephi Chapter 2"), and the `***` / New Testament separator.
+- 4 Nephi prints the book name before each reference ("4 Nephi 1:1"); that known prefix is stripped explicitly, not by a general rule that could eat a proper noun ending a KJV verse.
+- Every book must start at 1:1 and run in order, or loading fails. That check caught both bugs above.
+- Result: 31,102 KJV and 6,604 Book of Mormon verses, matching the standard counts. This edition has no Psalm superscriptions.
+
+**Cross-references.** Range targets (`Gen.1.2-Gen.1.3`) expand to one row per verse: 344,799 links become 614,179 verse pairs from 29,363 source verses. Five links to 3 John 1:15 drop because this edition folds that verse into 1:14. 3,512 links have zero or negative votes. The vote threshold is an evaluation-harness decision, not a loader one.

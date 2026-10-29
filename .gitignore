@@ -12,6 +12,7 @@ config.local.toml
 # Environment and cruft
 .venv/
 __pycache__/
+*.egg-info/
 *.pyc
 .ipynb_checkpoints/
 .pytest_cache/
