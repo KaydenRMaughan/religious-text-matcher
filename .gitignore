@@ -1,0 +1,24 @@
+# Data: fetched by scripts, never committed
+data/raw/
+data/processed/
+data/private/
+*.pkl
+*.parquet
+*.npy
+
+# Local config (points the app at a private corpus)
+config.local.toml
+
+# Environment and cruft
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets
+.env
+.streamlit/secrets.toml

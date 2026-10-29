@@ -1,0 +1,10 @@
+# Pinned once the environment is built (week of Nov 2)
+streamlit
+pandas
+numpy
+sentence-transformers
+rank-bm25
+plotly
+scikit-learn
+requests
+pytest
