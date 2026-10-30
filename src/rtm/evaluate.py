@@ -33,8 +33,11 @@ def build_qrels(xrefs: pd.DataFrame, min_votes: int) -> dict[str, dict[str, int]
     no duplicate pairs). Keep links with ``votes >= min_votes``, drop self-links
     (``from_id == to_id``, decision 4), and leave out any query left with no links.
     """
-    raise NotImplementedError
-
+    xrefs = xrefs[(xrefs["votes"] >= min_votes) & (xrefs["from_id"] != xrefs["to_id"])]
+    qrels = {}
+    for f, t, v in xrefs[["from_id", "to_id", "votes"]].itertuples(index=False):
+        qrels.setdefault(f, {})[t] = int(v)
+    return qrels
 
 def split_queries(
     eligible: Collection[str],
@@ -55,8 +58,36 @@ def split_queries(
     ``np.random.default_rng(seed)``. Return both lists sorted. Raise ValueError if
     n_dev + n_test exceeds len(eligible).
     """
-    raise NotImplementedError
+    def _draw(pool: list[str], n:int, stratum, rng) -> list[str]:
+        """Draw n from pool, stratified by stratum, with proportional allocation."""
+        if n > len(pool):
+            raise ValueError(f"n ({n}) exceeds pool size ({len(pool)})")
+        # Group ids by stratum
+        groups = {}
+        for id_ in pool:
+            groups.setdefault(stratum[id_], []).append(id_)
 
+        # Determine how many to draw from each group
+        total = len(pool)
+        allocations = {g: round(n * len(ids) / total) for g, ids in groups.items()}
+        # Adjust the last group to take any remainder
+        last_group = sorted(groups.keys())[-1]
+        allocations[last_group] += n - sum(allocations.values())
+        # Draw from each group
+        drawn = []
+        for g, ids in groups.items():
+            rng.shuffle(ids)
+            drawn.extend(ids[:allocations[g]])
+        return sorted(drawn)
+    
+    pool = sorted(eligible)
+    if n_dev + n_test > len(pool):
+        raise ValueError(f"n_dev + n_test ({n_dev + n_test}) exceeds eligible ({len(pool)})")
+    rng = np.random.default_rng(seed)
+    dev = _draw(pool, n_dev, stratum, rng)
+    dev_set = set(dev)
+    test = _draw([id_ for id_ in pool if id_ not in dev_set], n_test, stratum, rng)
+    return sorted(dev), sorted(test)
 
 def filter_ranking(ranked: Sequence[str], query_id: str, judged: Collection[str]) -> list[str]:
     """The ranking the Bible metrics see: drop the query itself and unjudged ids.
@@ -64,12 +95,15 @@ def filter_ranking(ranked: Sequence[str], query_id: str, judged: Collection[str]
     Unjudged ids are those not in ``judged`` (the Book of Mormon, decision 8a:
     condensed lists, Sakai 2007). Order is preserved.
     """
-    raise NotImplementedError
+    # keep d if it's not the query itself and it's judged
+    return [d for d in ranked if d != query_id and d in judged]
 
 
 def gains(qrel: Mapping[str, int], graded: bool) -> dict[str, float]:
     """Gain per relevant id for nDCG: 1.0 if binary, log2(1 + votes) if graded (decision 2)."""
-    raise NotImplementedError
+    if graded:
+        return {d: np.log2(1 + v) for d, v in qrel.items()}
+    return {d: 1.0 for d in qrel}
 
 
 def evaluate_query(
@@ -89,7 +123,16 @@ def evaluate_query(
     the query itself, that is unjudged. It shows how much the Book of Mormon competes
     for the top slots.
     """
-    raise NotImplementedError
+    condensed = filter_ranking(ranked, query_id, judged)
+    raw = [d for d in ranked if d != query_id][:k]
+    return {
+        "recall": recall_at_k(condensed, qrel, k),
+        "recall_capped": recall_at_k(condensed, qrel, k, capped=True),
+        "mrr": reciprocal_rank(condensed, qrel, k),
+        "ndcg": ndcg_at_k(condensed, gains(qrel, graded=False), k),
+        "ndcg_graded": ndcg_at_k(condensed, gains(qrel, graded=True), k),
+        "unjudged_share": 1 - len([d for d in raw if d in judged]) / len(raw) if raw else 0.0,
+    }
 
 
 def paired_bootstrap(
@@ -103,7 +146,16 @@ def paired_bootstrap(
     return (observed mean difference, 2.5th percentile, 97.5th percentile). Use
     ``np.random.default_rng(seed)``. Raise ValueError on unequal or zero lengths.
     """
-    raise NotImplementedError
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    if len(a) != len(b):
+        raise ValueError(f"unequal lengths: {len(a)} vs {len(b)}")
+    if len(a) == 0:
+        raise ValueError("zero length")
+    d = a - b
+    rng = np.random.default_rng(seed)
+    means = [np.mean(d[rng.choice(len(d), size=len(d), replace=True)]) for _ in range(n_boot)]
+    return np.mean(d), np.percentile(means, 2.5), np.percentile(means, 97.5)
 
 
 # --- Claude: the batch runner ---------------------------------------------------------

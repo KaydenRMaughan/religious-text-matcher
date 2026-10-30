@@ -65,3 +65,9 @@ Settled by Kayden after a walkthrough of what each choice does to the models and
 **Book of Mormon verses are eligible and preferred answers.** This supersedes the kickoff's "demoed but not scored." How unjudged Book of Mormon results are scored, and what "preferred" means, are still open.
 
 **Follow-up, same day.** D&C is added privately for the conference test. Unjudged Book of Mormon results are dropped before scoring (condensed lists). "Preferred" means a score boost that wins when scores are close (2 Nephi 12 over Isaiah 2); its form and size are set at the app stage.
+
+## 2026-10-30: BM25 baseline is stemmed
+
+On the 2,000 dev queries at votes ≥ 5, stemmed BM25 beats plain on nDCG@10 by +0.0056 (paired bootstrap 95% interval +0.0014 to +0.0098). It's ahead on every metric at every cut, but only that interval excludes 0, and it is worse on more queries than it is better (318 better, 388 worse on nDCG): a few big wins and many small losses, the usual stemming pattern. Kayden chose stemmed: never meaningfully worse, and the stronger baseline is the conservative one to measure embeddings against.
+
+Dev BM25 (stemmed, k₁ = 1.5, b = 0.75, untuned), votes ≥ 5: Recall@10 0.201, capped 0.225, MRR@10 0.353, nDCG@10 0.211; about 11% of the raw top 10 is Book of Mormon.
