@@ -7,6 +7,7 @@ numpy==2.5.4
 sentence-transformers==6.2.0
 torch==2.15.0
 rank-bm25==0.2.2
+snowballstemmer==3.1.1
 plotly==7.1.0
 scikit-learn==1.9.1
 requests==2.34.2

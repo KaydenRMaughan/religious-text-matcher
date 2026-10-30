@@ -41,3 +41,25 @@
 - Result: 31,102 KJV and 6,604 Book of Mormon verses, matching the standard counts. This edition has no Psalm superscriptions.
 
 **Cross-references.** Range targets (`Gen.1.2-Gen.1.3`) expand to one row per verse: 344,799 links become 614,179 verse pairs from 29,363 source verses. Five links to 3 John 1:15 drop because this edition folds that verse into 1:14. 3,512 links have zero or negative votes. The vote threshold is an evaluation-harness decision, not a loader one.
+
+## 2026-10-30: Evaluation protocol
+
+Settled by Kayden after a walkthrough of what each choice does to the models and to the measurement. Full protocol in [how-it-works.md](how-it-works.md#evaluation-protocol-settled-2026-10-30).
+
+**Votes ≥ 5 as the relevance cut**, with ≥ 3 and ≥ 10 as robustness rows. ≥ 1 gives a median of 15 relevant verses per query, many weak; ≥ 10 keeps only 7.7k queries, skewed toward famous passages.
+
+**Binary relevance primary, graded secondary.** Votes measure popularity as well as relevance, so graded gain would reward models that favor famous verses.
+
+**Dev and test query sets** (2,000 each, seeded, stratified by testament). Tuning BM25 on the reported queries would overstate the baseline.
+
+**Neighbors stay in.** The first framing (that adjacent verses inflate scores) was wrong: only 0.2% of links go to an adjacent verse, so neighbors cost lexical models top-10 slots rather than giving free hits. The query verse and 66 self-links are removed.
+
+**Capped and uncapped recall both reported.**
+
+**Chunking is tested twice:** on the private conference corpus against each talk's own scripture citations (results stay private), and on a public second task over chapters. Design and budget still open.
+
+**BM25 uses Lucene's IDF**, not rank-bm25's Okapi default: `and` is in 79% of verses, where Okapi's IDF is negative and rank-bm25 floors it ad hoc.
+
+**Tokenizer: stemmed and unstemmed variants, chosen on dev.** Snowball doesn't touch KJV -eth/-est forms (`loveth`, `cometh`), so the stemmed variant maps them to modern forms first, without touching `priest`, `rest` or `Seth`. An unstemmed-only BM25 would be a straw man against the embedding models. Adds `snowballstemmer` (pure Python, BSD).
+
+**Book of Mormon verses are eligible and preferred answers.** This supersedes the kickoff's "demoed but not scored." How unjudged Book of Mormon results are scored, and what "preferred" means, are still open.
