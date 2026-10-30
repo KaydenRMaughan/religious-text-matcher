@@ -63,3 +63,5 @@ Settled by Kayden after a walkthrough of what each choice does to the models and
 **Tokenizer: stemmed and unstemmed variants, chosen on dev.** Snowball doesn't touch KJV -eth/-est forms (`loveth`, `cometh`), so the stemmed variant maps them to modern forms first, without touching `priest`, `rest` or `Seth`. An unstemmed-only BM25 would be a straw man against the embedding models. Adds `snowballstemmer` (pure Python, BSD).
 
 **Book of Mormon verses are eligible and preferred answers.** This supersedes the kickoff's "demoed but not scored." How unjudged Book of Mormon results are scored, and what "preferred" means, are still open.
+
+**Follow-up, same day.** D&C is added privately for the conference test. Unjudged Book of Mormon results are dropped before scoring (condensed lists). "Preferred" means a score boost that wins when scores are close (2 Nephi 12 over Isaiah 2); its form and size are set at the app stage.

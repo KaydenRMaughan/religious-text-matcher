@@ -71,14 +71,15 @@ For a query with relevant set *R* and ranked list *L*:
 3. **Queries:** two disjoint seeded samples of 2,000 source verses, stratified by testament. Dev is for tuning (k₁, b, tokenizer variant) and iteration; test is run once per model for the README.
 4. **Leakage:** the query verse is removed from its own candidates and self-links are dropped. Neighbors stay in, so the task is "find related verses anywhere", which slightly penalizes lexical models that rank adjacent verses high.
 5. **Recall:** capped and uncapped both reported; low uncapped numbers are expected with median |R| of 4–8.
-6. **Chunking vs truncation:** tested twice. Privately on the conference corpus (talk → its cited verses; results stay private). Publicly on a second task over longer units (chapters). Both designs still open; see below.
+6. **Chunking vs truncation:** tested twice. Privately on the conference corpus (talk → its cited verses; results stay private), with the Doctrine and Covenants added privately so D&C citations resolve. Publicly on a second task over longer units (chapters).
 7. **Tokenizer:** as in Models above.
-8. **Book of Mormon:** eligible and preferred as answers. How to score unjudged Book of Mormon results and what "preferred" means are still open; see below.
+8. **Book of Mormon:** eligible and preferred as answers.
+   - *Scoring (8a):* Book of Mormon results are unjudged by OpenBible, so they're dropped from the ranked list before the Bible metrics are computed (condensed lists, Sakai 2007). Each model's Book of Mormon share of the top 10 is reported separately. Book of Mormon accuracy is measured on the private talk-citation labels.
+   - *Preference (8b):* a score boost for Book of Mormon verses, sized to win when scores are close: 2 Nephi 12 should outrank Isaiah 2, which it quotes. A source boost never changes the order of Bible verses among themselves, so it leaves the condensed Bible metrics untouched.
 
 ## Open decisions
 
-- **8a. Scoring with Book of Mormon in the pool.** OpenBible labels cover the Bible only, so a retrieved Book of Mormon verse is unjudged, not wrong (2 Nephi 12 quotes Isaiah 2 nearly verbatim). Options: drop unjudged results from the ranked list before scoring (condensed lists, Sakai 2007) and report the Book of Mormon share of the top 10 separately; and/or hand-judge a sample.
-- **8b. What "preferred" means** in ranking: a source boost, a filter, or a separate result list per source.
+- **8b. Boost form and size** (Kayden's, at the app stage). Additive on cosine (a fixed margin, e.g. +0.02) or multiplicative (BM25 scores have no fixed scale). Size it on the known parallels as a public check: 2 Ne 12–24 ↔ Isa 2–14, 1 Ne 20–21 ↔ Isa 48–49, Mosiah 14 ↔ Isa 53, 3 Ne 22 ↔ Isa 54, 3 Ne 12–14 ↔ Matt 5–7. The boost should lift the parallel above its source without flooding unrelated queries with Book of Mormon verses (check the top-10 share).
 - **6a. The chapter task:** query unit, relevance definition (e.g. a chapter is relevant if it holds a ≥ 5-vote target), and chunk size.
-- **6b. The private test:** parsing citations like `Ex. 17:9–13` and `D&C 27:15, 17` into ids; D&C and Pearl of Great Price aren't in the public corpus, so either restrict to Bible and Book of Mormon citations or add those texts privately.
+- **6b. The private test:** parsing citations like `Ex. 17:9–13` and `D&C 27:15, 17` into ids (Claude). Source and terms for the private D&C text still to check; Pearl of Great Price citations are dropped unless added the same way.
 - **Budget.** The S-tier budget was 10–12 hrs (3 spent). Decisions 6 and 8 add roughly 5–7 hrs; needs a check-in.
