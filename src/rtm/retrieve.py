@@ -4,11 +4,43 @@ Spec written 2026-10-30; bodies are Kayden's to type. Tests: tests/test_retrieve
 Decisions behind the spec: docs/decisions.md, 2026-10-30.
 """
 from __future__ import annotations
+import collections
+import functools
+import re
 
 import numpy as np
 import snowballstemmer
 
 _STEMMER = snowballstemmer.stemmer("english")
+_TOKEN = re.compile(r"[a-z]+(?:'[a-z]+)?")
+
+# Words of 5+ letters ending in -eth/-est that aren't KJV verb forms. Built 2026-10-30
+# from the corpus: every such word with no modern form (base, base+s, base+es, base+ed,
+# base+ing) elsewhere in the corpus, minus the rare verbs among them, plus non-verbs
+# that do have a spurious match (forest -> for). Superlatives (greatest) are left to
+# the rule: mapping them onto their base is a harmless conflation.
+_NOT_VERBS = frozenset({
+    # nouns, adjectives, ordinals
+    "chest", "detest", "dishonest", "forest", "guest", "harvest", "honest", "infest",
+    "interest", "manifest", "modest", "priest", "protest", "request", "shibboleth",
+    "sibboleth", "teeth", "tempest",
+    "twentieth", "thirtieth", "fortieth", "sixtieth", "eightieth", "ninetieth",
+    # names
+    "alameth", "alemeth", "ashtoreth", "azmaveth", "benzoheth", "bethazmaveth",
+    "chinnereth", "dabbasheth", "elisabeth", "hammoleketh", "harosheth", "hazarmaveth",
+    "ishbosheth", "japheth", "jerubbesheth", "jetheth", "kirharaseth", "kirhareseth",
+    "mephibosheth", "meshullemeth", "mispereth", "nazareth", "peleth", "pibeseth",
+    "pochereth", "remeth", "shallecheth", "sophereth", "tanhumeth", "tebeth", "topheth",
+    "zoheleth", "zoheth",
+})
+
+
+@functools.cache  # ~14k distinct words vs ~1M tokens: stem each word once
+def _stem(token: str) -> str:
+    """KJV -eth/-est verb ending -> modern -es, then Snowball (rule 4)."""
+    if len(token) > 4 and token.endswith(("eth", "est")) and token not in _NOT_VERBS:
+        token = token[:-3] + "es"  # lov-eth -> lov-es, know-est -> know-es
+    return _STEMMER.stemWord(token)
 
 
 def tokenize(text: str, stem: bool = False) -> list[str]:
@@ -33,7 +65,10 @@ def tokenize(text: str, stem: bool = False) -> list[str]:
     stem length, or a check that the modern form exists in the corpus vocabulary.
     Irregular forms (``hath``, ``doth``, ``saith``) are out of scope.
     """
-    raise NotImplementedError
+    tokens = _TOKEN.findall(text.replace("’", "'").lower())
+    if stem:
+        tokens = [_stem(t) for t in tokens]
+    return tokens
 
 
 class BM25:
@@ -59,12 +94,39 @@ class BM25:
     """
 
     def __init__(self, docs: list[list[str]], k1: float = 1.5, b: float = 0.75) -> None:
-        raise NotImplementedError
+        """Initialize with pre-tokenized documents, and optional BM25 parameters."""
+        self.k1 = k1
+        self.b = b
+        self.N = len(docs)
+        self.doc_len = np.array([len(doc) for doc in docs], dtype=float)
+        self.avgdl = np.mean(self.doc_len)
+        self.norm = k1 * (1 - b + b * (self.doc_len / self.avgdl))
+        postings = collections.defaultdict(list)
+        for i, doc in enumerate(docs):
+            for term, count in collections.Counter(doc).items():
+                postings[term].append((i, count))
+        self.inverted_index = {
+            term: (
+                np.array([i for i, _ in pairs]),
+                np.array([c for _, c in pairs],dtype=float)
+            )
+            for term, pairs in postings.items()
+        }
 
     def idf(self, term: str) -> float:
         """IDF of ``term`` as defined above; 0.0 for a term in no document."""
-        raise NotImplementedError
+        if term not in self.inverted_index:
+            return 0.0
+        n_q = len(self.inverted_index[term][0])
+        return float(np.log(1 + (self.N - n_q + 0.5) / (n_q + 0.5)))
 
     def scores(self, query: list[str]) -> np.ndarray:
         """BM25 score of every document for ``query``, shape (N,), in ``docs`` order."""
-        raise NotImplementedError
+        scores = np.zeros(self.N, dtype=float)
+        for term in query:
+            if term not in self.inverted_index:
+                continue
+            idx, f = self.inverted_index[term]
+            idf = self.idf(term)
+            scores[idx] += idf * f * (self.k1 + 1) / (f + self.norm[idx])
+        return scores
