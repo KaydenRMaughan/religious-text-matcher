@@ -1,0 +1,159 @@
+"""Evaluation protocol: labels, query sets, per-query scoring, and the batch runner.
+
+Spec written 2026-10-30. The protocol functions are Kayden's to type; ``run`` and
+``summarize`` (the batch runner) are Claude's. Tests: tests/test_evaluate.py.
+Protocol: docs/how-it-works.md, "Evaluation protocol".
+
+Flow:
+    cross-references --build_qrels--> {query: {target: votes}}   (one per vote cut)
+    eligible queries --split_queries--> dev, test
+    retriever scores --run--> ranked ids --evaluate_query--> per-query metrics
+    per-query metrics --summarize--> means per cut;  paired_bootstrap compares models
+"""
+from __future__ import annotations
+
+from collections.abc import Callable, Collection, Mapping, Sequence
+
+import numpy as np
+import pandas as pd
+
+from rtm.metrics import ndcg_at_k, recall_at_k, reciprocal_rank
+
+VOTE_CUTS = (3, 5, 10)
+PRIMARY_CUT = 5
+METRICS = ("recall", "recall_capped", "mrr", "ndcg", "ndcg_graded", "unjudged_share")
+
+
+# --- Kayden: the protocol -----------------------------------------------------------
+
+def build_qrels(xrefs: pd.DataFrame, min_votes: int) -> dict[str, dict[str, int]]:
+    """Relevance labels ("qrels") at one vote cut: {query id: {relevant id: votes}}.
+
+    ``xrefs`` has columns ``from_id``, ``to_id``, ``votes`` (one row per verse pair,
+    no duplicate pairs). Keep links with ``votes >= min_votes``, drop self-links
+    (``from_id == to_id``, decision 4), and leave out any query left with no links.
+    """
+    raise NotImplementedError
+
+
+def split_queries(
+    eligible: Collection[str],
+    stratum: Mapping[str, str],
+    n_dev: int,
+    n_test: int,
+    seed: int,
+) -> tuple[list[str], list[str]]:
+    """Two disjoint, seeded samples of query ids, stratified by ``stratum`` (decision 3).
+
+    ``stratum`` maps each id to its group (here the testament). Proportional
+    allocation: for a sample of size n, a group with share p of ``eligible`` gets
+    round(n · p) ids, and the last group in sorted name order takes the remainder,
+    so sizes are exact. Draw dev first, then test from what's left.
+
+    Deterministic: the same ``eligible`` set and ``seed`` give the same samples
+    whatever order ``eligible`` arrives in (sort before sampling). Use
+    ``np.random.default_rng(seed)``. Return both lists sorted. Raise ValueError if
+    n_dev + n_test exceeds len(eligible).
+    """
+    raise NotImplementedError
+
+
+def filter_ranking(ranked: Sequence[str], query_id: str, judged: Collection[str]) -> list[str]:
+    """The ranking the Bible metrics see: drop the query itself and unjudged ids.
+
+    Unjudged ids are those not in ``judged`` (the Book of Mormon, decision 8a:
+    condensed lists, Sakai 2007). Order is preserved.
+    """
+    raise NotImplementedError
+
+
+def gains(qrel: Mapping[str, int], graded: bool) -> dict[str, float]:
+    """Gain per relevant id for nDCG: 1.0 if binary, log2(1 + votes) if graded (decision 2)."""
+    raise NotImplementedError
+
+
+def evaluate_query(
+    ranked: Sequence[str],
+    query_id: str,
+    qrel: Mapping[str, int],
+    judged: Collection[str],
+    k: int = 10,
+) -> dict[str, float]:
+    """All metrics for one query, keyed by METRICS.
+
+    ``ranked`` is the retriever's raw ranking (Bible and Book of Mormon mixed, query
+    included). Scoring metrics use the condensed list from ``filter_ranking``:
+    recall@k uncapped and capped, MRR@k, nDCG@k binary and graded.
+
+    ``unjudged_share`` is diagnostic: the share of the raw top k, after removing only
+    the query itself, that is unjudged. It shows how much the Book of Mormon competes
+    for the top slots.
+    """
+    raise NotImplementedError
+
+
+def paired_bootstrap(
+    a: Sequence[float], b: Sequence[float], n_boot: int = 2000, seed: int = 0
+) -> tuple[float, float, float]:
+    """Mean of a − b over queries, with a 95% percentile bootstrap interval.
+
+    ``a`` and ``b`` are one metric for two models on the same queries, in the same
+    order. Resample *query indexes* with replacement (the same indexes for both
+    models: that's what makes it paired), take mean(a[i] − b[i]) per resample, and
+    return (observed mean difference, 2.5th percentile, 97.5th percentile). Use
+    ``np.random.default_rng(seed)``. Raise ValueError on unequal or zero lengths.
+    """
+    raise NotImplementedError
+
+
+# --- Claude: the batch runner ---------------------------------------------------------
+
+TOP_M = 200  # raw ranks kept per query: ample for 10 judged hits after condensing
+
+
+def _top_m(scores: np.ndarray, m: int) -> np.ndarray:
+    """Indexes of the m highest scores, best first, ties in corpus order.
+
+    Same result as a full stable argsort cut to m, ~15x faster on 37k verses: keep
+    everything at or above the m-th largest score, then sort only those.
+    """
+    if m >= len(scores):
+        return np.argsort(-scores, kind="stable")
+    cutoff = np.partition(scores, -m)[-m]
+    candidates = np.flatnonzero(scores >= cutoff)
+    return candidates[np.argsort(-scores[candidates], kind="stable")][:m]
+
+
+def run(
+    score_fn: Callable[[str], np.ndarray],
+    query_ids: Sequence[str],
+    verses: pd.DataFrame,
+    qrels: Mapping[int, Mapping[str, Mapping[str, int]]],
+    judged: Collection[str],
+    k: int = 10,
+) -> pd.DataFrame:
+    """Score every query at every vote cut. One row per (query, cut) with METRICS.
+
+    ``score_fn`` maps query text to one score per row of ``verses``. ``qrels`` maps
+    each vote cut to its labels; a query with no labels at a cut is skipped there.
+    Ties break by corpus order, so runs are reproducible.
+    """
+    text = verses.set_index("id")["text"]
+    ids = verses["id"].to_numpy()
+    judged = set(judged)
+    rows = []
+    for qid in query_ids:
+        scores = np.asarray(score_fn(text[qid]), dtype=float)
+        ranked = ids[_top_m(scores, TOP_M)].tolist()
+        for cut, labels in qrels.items():
+            if qid in labels:
+                rows.append({"query_id": qid, "min_votes": cut,
+                             **evaluate_query(ranked, qid, labels[qid], judged, k)})
+    return pd.DataFrame(rows)
+
+
+def summarize(results: pd.DataFrame) -> pd.DataFrame:
+    """Mean of each metric per vote cut, with the number of queries scored."""
+    out = results.groupby("min_votes")[list(METRICS)].mean()
+    out.insert(0, "n_queries", results.groupby("min_votes").size())
+    return out

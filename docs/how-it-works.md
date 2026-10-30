@@ -24,7 +24,7 @@ query text ──> retriever (BM25 | MiniLM | mpnet) ──> ranked verses ─�
 | Tokenizer | `src/rtm/retrieve.py` `tokenize` | Done (KJV verb rule drafted by Claude at Kayden's request) | **Kayden** |
 | BM25 baseline | `src/rtm/retrieve.py` `BM25` | Done: index 0.8 s, about 2 ms a query on 37,706 verses | **Kayden** |
 | Metrics | `src/rtm/metrics.py` | Done | **Kayden** |
-| Evaluation protocol | `src/rtm/evaluate.py` | Next | **Kayden** (Claude: the batch runner) |
+| Evaluation protocol | `src/rtm/evaluate.py` | Spec and failing tests; runner done (`scripts/run_eval.py`) | **Kayden** (Claude: the batch runner) |
 | Embedding retrievers | `src/rtm/retrieve.py` | Later | **Kayden** (Claude: model loading and caching) |
 | App | `app/app.py` | Later | Claude |
 
