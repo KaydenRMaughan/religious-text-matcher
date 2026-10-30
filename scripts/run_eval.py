@@ -1,46 +1,63 @@
-"""Run the retrieval evaluation and write per-query results to results/.
+"""Run the retrieval evaluation, write per-query results, and compare models to BM25.
 
-    python scripts/run_eval.py                  # BM25, plain and stemmed, on dev
-    python scripts/run_eval.py --split test     # the reported run: once per final model
+    python scripts/run_eval.py                          # all models on dev
+    python scripts/run_eval.py --models bm25 minilm     # a subset
+    python scripts/run_eval.py --k1 1.2 --b 0.6         # BM25 with tuned parameters
+    python scripts/run_eval.py --split test             # the reported run: once, at the end
 
-The query samples are seeded (SEED), so every run and every model sees the same queries.
+The query samples are seeded, so every run and every model sees the same queries.
 """
 from __future__ import annotations
 
 import argparse
 import time
 
-from rtm.corpus import RAW_DIR, REPO_ROOT, load_cross_references, load_scripture
-from rtm.evaluate import PRIMARY_CUT, VOTE_CUTS, build_qrels, run, split_queries, summarize
-from rtm.retrieve import BM25, tokenize
+import pandas as pd
+from _setup import RESULTS, as_float, bm25_score_fn, dense_score_fn, load_setup
 
-SEED = 20261030
-N_DEV = N_TEST = 2000
-RESULTS = REPO_ROOT / "results"
+from rtm.evaluate import paired_bootstrap, run, summarize
+
+COMPARE = ("ndcg", "recall_capped", "mrr")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
+    parser.add_argument("--models", nargs="+", default=["bm25", "minilm", "mpnet"],
+                        choices=["bm25", "minilm", "mpnet"])
+    parser.add_argument("--k1", type=float, default=1.5)
+    parser.add_argument("--b", type=float, default=0.75)
     args = parser.parse_args()
 
-    verses = load_scripture()
-    xrefs = load_cross_references(RAW_DIR / "cross_references.txt", verses["id"].tolist())
-    judged = set(verses.loc[verses["source"] != "Book of Mormon", "id"])
-    qrels = {cut: build_qrels(xrefs, cut) for cut in VOTE_CUTS}
-    stratum = verses.set_index("id")["source"].to_dict()
-    dev, test = split_queries(qrels[PRIMARY_CUT].keys(), stratum, N_DEV, N_TEST, SEED)
-    queries = dev if args.split == "dev" else test
-
+    s = load_setup()
+    queries = s.dev if args.split == "dev" else s.test
     RESULTS.mkdir(exist_ok=True)
-    for stem in (False, True):
-        name = f"bm25_{'stemmed' if stem else 'plain'}"
-        bm25 = BM25([tokenize(t, stem) for t in verses["text"]])
+    results = {}
+    for model in args.models:
+        score_fn = (bm25_score_fn(s.verses, args.k1, args.b) if model == "bm25"
+                    else dense_score_fn(s.verses, model))
         start = time.perf_counter()
-        results = run(lambda q: bm25.scores(tokenize(q, stem)), queries, verses, qrels, judged)
-        results.to_csv(RESULTS / f"{args.split}_{name}.csv", index=False)
-        print(f"\n{name} on {args.split} ({time.perf_counter() - start:.0f} s)")
-        print(summarize(results).round(3).to_string())
+        results[model] = run(score_fn, queries, s.verses, s.qrels, s.judged)
+        results[model].to_csv(RESULTS / f"{args.split}_{model}.csv", index=False)
+        label = f"bm25 (stemmed, k1={args.k1}, b={args.b})" if model == "bm25" else model
+        print(f"\n{label} on {args.split} ({time.perf_counter() - start:.0f} s)")
+        print(summarize(results[model]).round(3).to_string())
+
+    if "bm25" in results and len(results) > 1:
+        print("\nPaired bootstrap vs BM25: mean difference [95% interval]")
+        rows = []
+        for model in (m for m in results if m != "bm25"):
+            both = results[model].merge(results["bm25"], on=["query_id", "min_votes"],
+                                        suffixes=("", "_bm25"))
+            for cut, g in both.groupby("min_votes"):
+                row = {"model": model, "min_votes": cut}
+                for metric in COMPARE:
+                    d, lo, hi = paired_bootstrap(g[metric], g[f"{metric}_bm25"])
+                    row[metric] = f"{as_float(d):+.3f} [{as_float(lo):+.3f}, {as_float(hi):+.3f}]"
+                rows.append(row)
+        table = pd.DataFrame(rows)
+        table.to_csv(RESULTS / f"{args.split}_compare.csv", index=False)
+        print(table.to_string(index=False))
 
 
 if __name__ == "__main__":

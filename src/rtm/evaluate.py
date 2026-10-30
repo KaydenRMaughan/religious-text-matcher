@@ -158,6 +158,32 @@ def paired_bootstrap(
     return np.mean(d), np.percentile(means, 2.5), np.percentile(means, 97.5)
 
 
+def grid_search(
+    make_score_fn: Callable[..., Callable[[str], np.ndarray]],
+    grid: Mapping[str, Sequence],
+    query_ids: Sequence[str],
+    verses: pd.DataFrame,
+    qrels: Mapping[int, Mapping[str, Mapping[str, int]]],
+    judged: Collection[str],
+    metric: str = "ndcg",
+    cut: int = PRIMARY_CUT,
+) -> pd.DataFrame:
+    """Score every combination of ``grid`` on the dev queries; best first.
+
+    ``grid`` maps parameter names to candidate values, e.g. {"k1": [0.9, 1.2],
+    "b": [0.5, 0.75]}: every combination (the Cartesian product) is tried.
+    ``make_score_fn(**params)`` builds a retriever's score function for one
+    combination; ``run`` it at the single vote cut ``cut`` and average ``metric``.
+
+    Return one row per combination: a column per parameter, then ``metric`` (the mean)
+    and ``n_queries``. Sort by ``metric`` descending; ties keep grid order (a stable
+    sort), so the first row is reproducible. Raise ValueError for an unknown metric.
+
+    Dev queries only: tuning on test would leak into the reported numbers (decision 3).
+    """
+    raise NotImplementedError
+
+
 # --- Claude: the batch runner ---------------------------------------------------------
 
 TOP_M = 200  # raw ranks kept per query: ample for 10 judged hits after condensing

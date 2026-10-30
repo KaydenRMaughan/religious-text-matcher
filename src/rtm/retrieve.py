@@ -130,3 +130,32 @@ class BM25:
             idf = self.idf(term)
             scores[idx] += idf * f * (self.k1 + 1) / (f + self.norm[idx])
         return scores
+
+
+def l2_normalize(x: np.ndarray) -> np.ndarray:
+    """Scale each row of ``x`` to unit L2 length, as float64; a 1-D ``x`` is one vector.
+
+        x̂ = x / ‖x‖₂,   ‖x‖₂ = sqrt(Σⱼ xⱼ²)
+
+    A zero vector has no direction: leave it as zeros (it then scores 0 against
+    everything) rather than dividing by zero. Doesn't modify ``x``.
+    """
+    raise NotImplementedError
+
+
+class DenseRetriever:
+    """Exact cosine-similarity search over sentence embeddings.
+
+        cos(q, d) = q·d / (‖q‖ ‖d‖) = q̂·d̂
+
+    Normalize the document vectors once, at construction; then one query against
+    all N documents is a single matrix-vector product, D̂ q̂, shape (N,). Scores lie
+    in [−1, 1] and don't depend on the query vector's length.
+    """
+
+    def __init__(self, doc_vectors: np.ndarray) -> None:
+        raise NotImplementedError
+
+    def scores(self, query_vector: np.ndarray) -> np.ndarray:
+        """Cosine similarity of every document to ``query_vector`` (shape (dim,)), shape (N,)."""
+        raise NotImplementedError

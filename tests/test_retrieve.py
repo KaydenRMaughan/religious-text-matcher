@@ -127,3 +127,53 @@ def test_term_frequency_saturates():
     s = BM25(docs).scores(["grace"])[:4]
     gains = np.diff(s)
     assert np.all(gains > 0) and np.all(np.diff(gains) < 0)
+
+
+# --- dense retrieval -------------------------------------------------------------------
+
+from rtm.retrieve import DenseRetriever, l2_normalize  # noqa: E402
+
+VECS = np.array([[3.0, 4.0], [1.0, 0.0], [0.0, 2.0], [-1.0, -1.0]])
+
+
+def test_l2_normalize_rows_have_unit_length():
+    out = l2_normalize(VECS)
+    np.testing.assert_allclose(np.linalg.norm(out, axis=1), 1.0)
+    np.testing.assert_allclose(out[0], [0.6, 0.8])
+
+
+def test_l2_normalize_one_vector_and_zero_vector():
+    np.testing.assert_allclose(l2_normalize(np.array([0.0, 5.0])), [0.0, 1.0])
+    out = l2_normalize(np.array([[0.0, 0.0], [2.0, 0.0]]))
+    np.testing.assert_array_equal(out, [[0.0, 0.0], [1.0, 0.0]])
+    assert not np.isnan(out).any()
+
+
+def test_l2_normalize_leaves_input_alone_and_returns_float64():
+    x = np.array([[3, 4]], dtype=np.float32)
+    out = l2_normalize(x)
+    assert out.dtype == np.float64
+    np.testing.assert_array_equal(x, [[3, 4]])
+
+
+def test_dense_scores_are_cosines():
+    q = np.array([1.0, 1.0])
+    expected = VECS @ q / (np.linalg.norm(VECS, axis=1) * np.linalg.norm(q))
+    s = DenseRetriever(VECS).scores(q)
+    assert s.shape == (4,)
+    np.testing.assert_allclose(s, expected)
+
+
+def test_dense_scores_ignore_query_length_and_bound():
+    r = DenseRetriever(VECS)
+    q = np.array([2.0, -1.0])
+    np.testing.assert_allclose(r.scores(q), r.scores(10 * q))
+    s = r.scores(q)
+    assert np.all(s <= 1 + 1e-12) and np.all(s >= -1 - 1e-12)
+
+
+def test_dense_identical_opposite_orthogonal():
+    s = DenseRetriever(VECS).scores(np.array([1.0, 0.0]))
+    assert s[1] == pytest.approx(1.0)       # same direction
+    assert s[2] == pytest.approx(0.0)       # orthogonal
+    assert s[3] == pytest.approx(-1 / np.sqrt(2))

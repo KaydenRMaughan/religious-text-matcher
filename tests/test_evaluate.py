@@ -176,3 +176,45 @@ def test_top_m_matches_stable_full_sort_with_ties():
         s = rng.integers(0, 5, 1000).astype(float)  # heavy ties, like BM25's zeros
         for m in (1, 10, 200, 1000, 2000):
             np.testing.assert_array_equal(_top_m(s, m), np.argsort(-s, kind="stable")[:m])
+
+
+# --- grid_search ------------------------------------------------------------------------
+
+def _toy():
+    verses = pd.DataFrame({
+        "id": ["Gen.1.1", "John.1.1", "Heb.11.3", "Gen.1.3", "2Cor.4.6"],
+        "text": ["beginning", "beginning word", "worlds framed", "light", "light shine"],
+    })
+    return verses, {5: build_qrels(XREFS, 5)}, set(verses["id"])
+
+
+def test_grid_search_tries_every_combination_best_first():
+    from rtm.evaluate import grid_search
+    verses, qrels, judged = _toy()
+    calls = []
+
+    def make(good, bonus):
+        calls.append((good, bonus))
+
+        def score(q):  # good=True ranks by word overlap; good=False ranks backwards
+            s = np.array([len(set(q.split()) & set(t.split())) for t in verses["text"]], float)
+            return s if good else -s
+        return score
+
+    out = grid_search(make, {"good": [False, True], "bonus": [1, 2]},
+                      ["Gen.1.1", "Gen.1.3"], verses, qrels, judged)
+    assert sorted(calls) == [(False, 1), (False, 2), (True, 1), (True, 2)]
+    assert list(out.columns) == ["good", "bonus", "ndcg", "n_queries"]
+    assert len(out) == 4
+    assert out["good"].tolist() == [True, True, False, False]
+    assert out["bonus"].tolist()[:2] == [1, 2]          # tie: grid order kept
+    assert out["ndcg"].is_monotonic_decreasing
+    assert (out["n_queries"] == 2).all()
+
+
+def test_grid_search_rejects_unknown_metric():
+    from rtm.evaluate import grid_search
+    verses, qrels, judged = _toy()
+    with pytest.raises(ValueError):
+        grid_search(lambda: (lambda q: np.zeros(5)), {}, ["Gen.1.1"], verses, qrels, judged,
+                    metric="accuracy")
