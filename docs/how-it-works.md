@@ -82,4 +82,4 @@ For a query with relevant set *R* and ranked list *L*:
 - **8b. Boost form and size** (Kayden's, at the app stage). Additive on cosine (a fixed margin, e.g. +0.02) or multiplicative (BM25 scores have no fixed scale). Size it on the known parallels as a public check: 2 Ne 12–24 ↔ Isa 2–14, 1 Ne 20–21 ↔ Isa 48–49, Mosiah 14 ↔ Isa 53, 3 Ne 22 ↔ Isa 54, 3 Ne 12–14 ↔ Matt 5–7. The boost should lift the parallel above its source without flooding unrelated queries with Book of Mormon verses (check the top-10 share).
 - **6a. The chapter task:** query unit, relevance definition (e.g. a chapter is relevant if it holds a ≥ 5-vote target), and chunk size.
 - **6b. The private test:** parsing citations like `Ex. 17:9–13` and `D&C 27:15, 17` into ids (Claude). Source and terms for the private D&C text still to check; Pearl of Great Price citations are dropped unless added the same way.
-- **Budget.** The S-tier budget was 10–12 hrs (3 spent). Decisions 6 and 8 add roughly 5–7 hrs; needs a check-in.
+- **Budget.** Raised from 10–12 to 15–19 hrs on 2026-10-30 (confirmed) for decisions 6 and 8; 4 hrs logged.
