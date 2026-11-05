@@ -222,6 +222,52 @@ run to decide whether a hybrid is worth adding, and it isn't yet part of the pro
 
 Test reproduces dev to within 0.002 nDCG, so the dev tuning didn't overfit. The hybrid beats BM25 at every cut on nDCG and capped recall (+0.012, +0.011 and +0.029 nDCG at ≥ 3, ≥ 5 and ≥ 10). Its MRR gain is clear only at ≥ 10: it adds more correct verses to the top 10 more than it moves the first hit up.
 
+## 11. Long documents, the private test and the boost
+
+**Chunking** (`chunk.py`). Talks arrive as one block of about 1,700 words with no
+paragraph breaks, so passages are built from sentences:
+- Whole sentences are packed into windows of at most 200 words (about 250 mpnet
+  tokens, within both models' limits).
+- Each window repeats the previous one's last sentence, so a thought that straddles a
+  boundary is seen whole at least once.
+- A sentence longer than 200 words is split on word boundaries.
+
+Without chunking, the model truncates: it reads the first 256 or 384 tokens and ignores
+the rest, which is the first 12–18% of a talk.
+
+**Max-pooling** (`max_pool_scores`, drafted by Claude). A long *query* (a talk) is split
+into passages c₁…cₙ, and each verse scores
+
+score(d) = max<sub>i</sub> cos(cᵢ, d)
+
+That's the passage of the talk it matches best. Averaging would dilute a verse that
+relates to one paragraph of a 12-paragraph talk, and talks cite scripture passage by
+passage. A long *document* (a chapter or a talk in the app) is handled the same way from
+the other side: it scores as its best passage.
+
+**Private test protocol** (results private):
+- **Queries:** the 2,220 talks that cite at least one verse.
+- **Labels:** each talk's own footnoted verses, from `citations.py`. Chapter-only
+  citations are dropped (811, against 53k verse citations).
+- **Pool:** all five works, 41,995 verses.
+- **Split:** talks halved into dev and test, seeded and stratified by decade.
+- **Second label set:** Book of Mormon citations only, to measure how well each model
+  finds the Book of Mormon verses speakers actually chose.
+- **Comparisons:** chunked against truncated for both models; the hybrid against BM25.
+
+**Boost** (`boost`, drafted by Claude). Book of Mormon verses get a fixed margin δ added
+to their hybrid score. δ is tuned on private dev to maximize nDCG@10 over all citations,
+then reported on private test. Because RRF scores are small (about 1/61 at rank 1), δ is
+small too. 0.001 lifts a Book of Mormon verse past a Bible verse a few ranks ahead of it
+near the top of the list. If speakers prefer a Book of Mormon verse when it's close, the
+citations show it and the tuning picks a positive δ. If they don't, δ = 0 wins. The data
+decides, not a prior.
+
+**Chapter task** (public). Verse queries against the 1,189 Bible chapters. A chapter is
+relevant if it holds a ≥ 5-vote target of the query, excluding the query's own chapter.
+It compares truncated chapter embeddings with chunked ones, plus BM25 and the hybrid.
+Nothing is tuned on it, so test is reported directly.
+
 ## 10. Limitations so far
 
 - **The labels reward wording.** Results measure agreement with a concordance-style

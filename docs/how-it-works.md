@@ -27,7 +27,12 @@ query text ──> retriever (BM25 | MiniLM | mpnet) ──> ranked verses ─�
 | Evaluation protocol | `src/rtm/evaluate.py` | Spec and failing tests; runner done (`scripts/run_eval.py`) | **Kayden** (Claude: the batch runner) |
 | Embedding retrievers | `src/rtm/retrieve.py`, `src/rtm/embed.py` | Spec and failing tests; encoding and cache done | **Kayden** (Claude: model loading and caching) |
 | Citation parser (private test) | `src/rtm/citations.py` | Done, 11 tests; resolves 50,229 cited verses in 2,211 talks | Claude |
-| App | `app/app.py` | Later | Claude |
+| Chunker | `src/rtm/chunk.py` | Done, 6 tests | Claude |
+| Max-pool and boost | `src/rtm/retrieve.py` | Done (drafted by Claude for review) | **Kayden** |
+| Private evaluation | `scripts/run_private_eval.py` | Built; results private | Claude (protocol: Kayden) |
+| Chapter task | `scripts/run_chapter_eval.py` | Built | Claude (protocol: Kayden) |
+| Search engine | `src/rtm/search.py` | Done, 5 tests | Claude |
+| App | `app/app.py` | Built | Claude |
 
 ## Data
 
