@@ -179,4 +179,12 @@ def rrf_scores(score_arrays: Sequence[np.ndarray], c: float = 60.0) -> np.ndarra
     All arrays must have the same shape (N,); raise ValueError otherwise, or if
     ``score_arrays`` is empty.
     """
-    raise NotImplementedError
+    if not score_arrays:
+        raise ValueError("score_arrays must be non-empty")
+    N = score_arrays[0].shape
+    if any(arr.shape != N for arr in score_arrays):
+        raise ValueError("all score arrays must have the same shape")
+    ranks = np.zeros((len(score_arrays), *N), dtype=int)
+    for i, scores in enumerate(score_arrays):
+        ranks[i] = np.argsort(np.argsort(-scores, kind="stable")) + 1  # 1-based
+    return np.sum(1 / (c + ranks), axis=0)

@@ -91,3 +91,9 @@ Run on the 2,000 dev queries with the Tutorial 3 functions (drafted by Claude at
 **Confirmed by Kayden:** BM25 k₁ = 0.4, b = 1.0 (now the `run_eval.py` defaults). Also: add the BM25 + mpnet RRF hybrid as a fourth model (`rrf_scores`, Kayden's to type, c = 60 fixed), and add the Pearl of Great Price privately (same public-domain source; 635 verses, standard counts; 2,831 more cited verses).
 
 **Test split, run once** (2,000 queries; nDCG@10, votes ≥ 5): BM25 0.215, MiniLM 0.163, mpnet 0.170. Paired differences against BM25: MiniLM −0.051 [−0.060, −0.042], mpnet −0.044 [−0.055, −0.034]. Every embedding deficit, at every cut and on every metric, has an interval that excludes 0. These closely reproduce dev, which suggests the dev tuning didn't overfit. The hybrid's test run follows once `rrf_scores` is typed.
+
+**Hybrid, test split** (`rrf_scores` typed by Kayden): nDCG@10 0.226 vs BM25's 0.215 at votes ≥ 5, a difference of +0.011 [+0.004, +0.019]. Capped recall +0.018 [+0.008, +0.027]. Both are positive at every cut. MRR is positive at every cut but its interval excludes 0 only at ≥ 10. **The headline: embeddings alone lose to BM25 on these labels, and the hybrid beats both.**
+
+## 2026-11-05: BYU Scripture Citation Index: acknowledged, not used
+
+Kayden decided not to use [scriptures.byu.edu](https://scriptures.byu.edu/) as data: it states no terms of use and offers no bulk access, and its citations come from the same talk footnotes our labels already use. The README and app must acknowledge it, though. It's the established tool for looking up which talks cite a given verse. This project does the reverse: given any passage, including new text that no index has seen, it finds related scripture by content.

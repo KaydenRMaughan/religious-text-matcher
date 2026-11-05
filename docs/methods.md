@@ -218,9 +218,9 @@ run to decide whether a hybrid is worth adding, and it isn't yet part of the pro
 | BM25, stemmed (k₁ 0.4, b 1.0) | 0.233 | 0.354 | 0.215 | — |
 | MiniLM | 0.177 | 0.282 | 0.163 | −0.051 [−0.060, −0.042] |
 | mpnet | 0.181 | 0.296 | 0.170 | −0.044 [−0.055, −0.034] |
-| BM25 + mpnet, RRF | pending | | | |
+| **BM25 + mpnet, RRF** | **0.250** | **0.364** | **0.226** | **+0.011 [+0.004, +0.019]** |
 
-Test reproduces dev to within 0.002 nDCG, so the dev tuning didn't overfit.
+Test reproduces dev to within 0.002 nDCG, so the dev tuning didn't overfit. The hybrid beats BM25 at every cut on nDCG and capped recall (+0.012, +0.011 and +0.029 nDCG at ≥ 3, ≥ 5 and ≥ 10). Its MRR gain is clear only at ≥ 10: it adds more correct verses to the top 10 more than it moves the first hit up.
 
 ## 10. Limitations so far
 
