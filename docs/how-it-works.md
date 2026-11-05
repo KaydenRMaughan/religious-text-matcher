@@ -26,6 +26,7 @@ query text ──> retriever (BM25 | MiniLM | mpnet) ──> ranked verses ─�
 | Metrics | `src/rtm/metrics.py` | Done | **Kayden** |
 | Evaluation protocol | `src/rtm/evaluate.py` | Spec and failing tests; runner done (`scripts/run_eval.py`) | **Kayden** (Claude: the batch runner) |
 | Embedding retrievers | `src/rtm/retrieve.py`, `src/rtm/embed.py` | Spec and failing tests; encoding and cache done | **Kayden** (Claude: model loading and caching) |
+| Citation parser (private test) | `src/rtm/citations.py` | Done, 11 tests; resolves 50,229 cited verses in 2,211 talks | Claude |
 | App | `app/app.py` | Later | Claude |
 
 ## Data

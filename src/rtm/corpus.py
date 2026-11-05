@@ -306,3 +306,19 @@ def load_local_config(repo_root: Path = REPO_ROOT) -> dict | None:
         p = Path(corpus["path"])
         corpus["path"] = p if p.is_absolute() else repo_root / p
     return config
+
+
+def load_scriptures_json(path: Path, book_id: str, source: str) -> pd.DataFrame:
+    """Load one book from the bcbooks/scriptures-json layout (public domain).
+
+    Used privately for the Doctrine and Covenants (``book_id="DC"``): ids follow the
+    corpus scheme, ``DC.27.15``. Headings and editorial material are not in the file.
+    """
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    rows = [
+        {"id": f"{book_id}.{s['section']}.{v['verse']}",
+         "title": v["reference"], "text": v["text"], "source": source,
+         "book": book_id, "chapter": int(s["section"]), "verse": int(v["verse"])}
+        for s in data["sections"] for v in s["verses"]
+    ]
+    return pd.DataFrame(rows)
