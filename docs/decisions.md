@@ -71,3 +71,13 @@ Settled by Kayden after a walkthrough of what each choice does to the models and
 On the 2,000 dev queries at votes ≥ 5, stemmed BM25 beats plain on nDCG@10 by +0.0056 (paired bootstrap 95% interval +0.0014 to +0.0098). It's ahead on every metric at every cut, but only that interval excludes 0, and it is worse on more queries than it is better (318 better, 388 worse on nDCG): a few big wins and many small losses, the usual stemming pattern. Kayden chose stemmed: never meaningfully worse, and the stronger baseline is the conservative one to measure embeddings against.
 
 Dev BM25 (stemmed, k₁ = 1.5, b = 0.75, untuned), votes ≥ 5: Recall@10 0.201, capped 0.225, MRR@10 0.353, nDCG@10 0.211; about 11% of the raw top 10 is Book of Mormon.
+
+## 2026-11-05: Dev results; embeddings lose alone, a hybrid wins
+
+Run on the 2,000 dev queries with the Tutorial 3 functions (drafted by Claude at Kayden's request; walkthrough in [methods.md](methods.md)).
+
+**BM25 tuning** (35 combinations, nDCG@10 at votes ≥ 5): best k₁ = 0.4, b = 1.0, +0.005 over the defaults (interval +0.002 to +0.008). The surface is flat near the top. Choice pending Kayden's confirmation.
+
+**Embeddings alone lose to tuned BM25** at every cut (mpnet −0.045 nDCG at ≥ 5, interval −0.055 to −0.034; MiniLM −0.053). Diagnosed: 47% of labeled links share a rare stemmed word vs 4% of random pairs, because the labels descend from a concordance-style reference. Also, the models were trained on modern English. On links with no shared rare word, mpnet's recall is 2.3x BM25's, but all models are near zero.
+
+**Exploratory hybrid:** reciprocal rank fusion of BM25 and mpnet beats BM25 at every cut, with every interval excluding 0. Whether to add it as a fourth model is Kayden's call.

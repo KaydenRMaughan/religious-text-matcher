@@ -12,6 +12,7 @@ Flow:
 """
 from __future__ import annotations
 
+import itertools
 from collections.abc import Callable, Collection, Mapping, Sequence
 
 import numpy as np
@@ -181,7 +182,16 @@ def grid_search(
 
     Dev queries only: tuning on test would leak into the reported numbers (decision 3).
     """
-    raise NotImplementedError
+    if metric not in METRICS:
+        raise ValueError(f"unknown metric {metric!r}; expected one of {METRICS}")
+    names = list(grid)
+    rows = []
+    for values in itertools.product(*(grid[n] for n in names)):
+        params = dict(zip(names, values))
+        results = run(make_score_fn(**params), query_ids, verses, {cut: qrels[cut]}, judged)
+        rows.append({**params, metric: results[metric].mean(), "n_queries": len(results)})
+    table = pd.DataFrame(rows, columns=[*names, metric, "n_queries"])
+    return table.sort_values(metric, ascending=False, kind="stable").reset_index(drop=True)
 
 
 # --- Claude: the batch runner ---------------------------------------------------------

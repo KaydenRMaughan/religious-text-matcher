@@ -140,7 +140,9 @@ def l2_normalize(x: np.ndarray) -> np.ndarray:
     A zero vector has no direction: leave it as zeros (it then scores 0 against
     everything) rather than dividing by zero. Doesn't modify ``x``.
     """
-    raise NotImplementedError
+    x = np.asarray(x, dtype=float)
+    norms = np.linalg.norm(x, axis=-1, keepdims=True)
+    return np.divide(x, norms, out=np.zeros_like(x), where=norms > 0)
 
 
 class DenseRetriever:
@@ -154,8 +156,8 @@ class DenseRetriever:
     """
 
     def __init__(self, doc_vectors: np.ndarray) -> None:
-        raise NotImplementedError
+        self.docs = l2_normalize(doc_vectors)  # unit rows, once per model
 
     def scores(self, query_vector: np.ndarray) -> np.ndarray:
         """Cosine similarity of every document to ``query_vector`` (shape (dim,)), shape (N,)."""
-        raise NotImplementedError
+        return self.docs @ l2_normalize(query_vector)  # (N, dim) @ (dim,) -> (N,) cosines
