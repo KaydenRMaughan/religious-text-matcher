@@ -1,10 +1,14 @@
-# Pinned once the environment is built (week of Nov 2)
-streamlit
-pandas
-numpy
-sentence-transformers
-rank-bm25
-plotly
-scikit-learn
-requests
-pytest
+# Direct dependencies, pinned 2026-10-29 on Python 3.14 (Windows, CPU).
+# torch is pinned because sentence-transformers pulls it in and it's the
+# heaviest, most version-sensitive piece; pip's default wheel is CPU-only.
+streamlit==1.66.1
+pandas==3.1.0
+numpy==2.5.4
+sentence-transformers==6.2.0
+torch==2.15.0
+rank-bm25==0.2.2
+snowballstemmer==3.1.1
+plotly==7.1.0
+scikit-learn==1.9.1
+requests==2.34.2
+pytest==9.2.0

@@ -21,7 +21,9 @@ Sentence-embedding semantic search over the King James Bible and the Book of Mor
 | Book of Mormon (Project Gutenberg #17) | Demo corpus | Public domain (US) |
 | [OpenBible.info cross-references](https://www.openbible.info/labs/cross-references/) | Evaluation labels | CC BY |
 
-Texts are downloaded by `scripts/fetch_data.py` into `data/raw/` (gitignored). No corpus text is committed to this repo.
+Texts are downloaded by `scripts/fetch_data.py` into `data/raw/` (gitignored), which also records each file's URL, date and SHA-256 in `data/raw/SOURCES.json`. No corpus text is committed to this repo.
+
+The parser yields one record per verse: 31,102 for the KJV and 6,604 for the Book of Mormon, the standard counts. Bible verse ids (`Gen.1.1`) match the cross-reference ids, and all but 5 of 344,799 cross-reference links join. The 5 point to 3 John 1:15, which this edition folds into 1:14.
 
 ## Results
 
@@ -39,6 +41,7 @@ _TBD._
 ```bash
 python -m venv .venv && .venv/Scripts/activate   # Windows; use bin/activate elsewhere
 pip install -r requirements.txt
+pip install -e .
 python scripts/fetch_data.py
 streamlit run app/app.py
 ```
