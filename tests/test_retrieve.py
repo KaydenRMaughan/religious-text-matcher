@@ -177,3 +177,37 @@ def test_dense_identical_opposite_orthogonal():
     assert s[1] == pytest.approx(1.0)       # same direction
     assert s[2] == pytest.approx(0.0)       # orthogonal
     assert s[3] == pytest.approx(-1 / np.sqrt(2))
+
+
+# --- reciprocal rank fusion ------------------------------------------------------------
+
+from rtm.retrieve import rrf_scores  # noqa: E402
+
+
+def test_rrf_hand_computed():
+    a = np.array([3.0, 2.0, 1.0])     # ranks 1, 2, 3
+    b = np.array([0.1, 0.9, 0.5])     # ranks 3, 1, 2
+    expected = [1 / 61 + 1 / 63, 1 / 62 + 1 / 61, 1 / 63 + 1 / 62]
+    np.testing.assert_allclose(rrf_scores([a, b]), expected)
+
+
+def test_rrf_uses_ranks_not_scale():
+    a = np.array([3.0, 2.0, 1.0]); b = np.array([0.1, 0.9, 0.5])
+    np.testing.assert_allclose(rrf_scores([a, b]), rrf_scores([1000 * a, b - 7]))
+
+
+def test_rrf_single_retriever_keeps_its_order():
+    a = np.array([0.2, 0.9, 0.5, 0.1])
+    assert np.argsort(-rrf_scores([a]), kind="stable").tolist() == [1, 2, 0, 3]
+
+
+def test_rrf_ties_break_by_corpus_order():
+    s = rrf_scores([np.array([1.0, 1.0, 0.0])], c=0)
+    np.testing.assert_allclose(s, [1.0, 0.5, 1 / 3])
+
+
+def test_rrf_rejects_bad_input():
+    with pytest.raises(ValueError):
+        rrf_scores([])
+    with pytest.raises(ValueError):
+        rrf_scores([np.zeros(3), np.zeros(4)])

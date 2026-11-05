@@ -308,17 +308,27 @@ def load_local_config(repo_root: Path = REPO_ROOT) -> dict | None:
     return config
 
 
-def load_scriptures_json(path: Path, book_id: str, source: str) -> pd.DataFrame:
-    """Load one book from the bcbooks/scriptures-json layout (public domain).
+# lds_slug in bcbooks/scriptures-json -> corpus book id (Pearl of Great Price).
+PEARL_BOOKS = {"moses": "Moses", "abr": "Abr", "js-m": "JSM", "js-h": "JSH", "a-of-f": "AofF"}
 
-    Used privately for the Doctrine and Covenants (``book_id="DC"``): ids follow the
-    corpus scheme, ``DC.27.15``. Headings and editorial material are not in the file.
+
+def load_scriptures_json(path: Path, source: str, book_id: str | None = None) -> pd.DataFrame:
+    """Load a book from the bcbooks/scriptures-json layout (public domain).
+
+    Used privately for the Doctrine and Covenants (a ``sections`` layout; pass
+    ``book_id="DC"``, giving ids like ``DC.27.15``) and the Pearl of Great Price (a
+    ``books`` layout; ids from PEARL_BOOKS, like ``Moses.1.39``). Headings and
+    editorial material are not in the files.
     """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if "sections" in data:
+        units = [(book_id, s["section"], s["verses"]) for s in data["sections"]]
+    else:
+        units = [(PEARL_BOOKS[b["lds_slug"]], c["chapter"], c["verses"])
+                 for b in data["books"] for c in b["chapters"]]
     rows = [
-        {"id": f"{book_id}.{s['section']}.{v['verse']}",
-         "title": v["reference"], "text": v["text"], "source": source,
-         "book": book_id, "chapter": int(s["section"]), "verse": int(v["verse"])}
-        for s in data["sections"] for v in s["verses"]
+        {"id": f"{bid}.{ch}.{v['verse']}", "title": v["reference"], "text": v["text"],
+         "source": source, "book": bid, "chapter": int(ch), "verse": int(v["verse"])}
+        for bid, ch, verses in units for v in verses
     ]
     return pd.DataFrame(rows)

@@ -125,3 +125,16 @@ def test_cross_references_join_to_kjv():
     xref = load_cross_references(corpus.RAW_DIR / "cross_references.txt", kjv_ids)
     assert len(xref) > 600_000
     assert xref["from_id"].nunique() > 29_000
+
+
+def test_scriptures_json_both_layouts(tmp_path):
+    from rtm.corpus import load_scriptures_json
+    dc = tmp_path / "dc.json"
+    dc.write_text(json.dumps({"sections": [{"section": 4, "verses": [
+        {"verse": 1, "reference": "D&C 4:1", "text": "Now behold."}]}]}))
+    pgp = tmp_path / "pgp.json"
+    pgp.write_text(json.dumps({"books": [{"lds_slug": "moses", "chapters": [{"chapter": 1, "verses": [
+        {"verse": 39, "reference": "Moses 1:39", "text": "For behold."}]}]}]}))
+    assert load_scriptures_json(dc, "Doctrine and Covenants", "DC")["id"].tolist() == ["DC.4.1"]
+    out = load_scriptures_json(pgp, "Pearl of Great Price")
+    assert out["id"].tolist() == ["Moses.1.39"] and out["chapter"].tolist() == [1]

@@ -8,6 +8,8 @@ import collections
 import functools
 import re
 
+from collections.abc import Sequence
+
 import numpy as np
 import snowballstemmer
 
@@ -161,3 +163,20 @@ class DenseRetriever:
     def scores(self, query_vector: np.ndarray) -> np.ndarray:
         """Cosine similarity of every document to ``query_vector`` (shape (dim,)), shape (N,)."""
         return self.docs @ l2_normalize(query_vector)  # (N, dim) @ (dim,) -> (N,) cosines
+
+
+def rrf_scores(score_arrays: Sequence[np.ndarray], c: float = 60.0) -> np.ndarray:
+    """Reciprocal rank fusion: combine several retrievers' scores over the same documents.
+
+        RRF(d) = Σ_m 1 / (c + rank_m(d))
+
+    rank_m(d) is d's 1-based rank under retriever m (highest score = rank 1), with ties
+    broken by corpus order (a stable sort), as in the evaluation runner. Only ranks are
+    used, so BM25 scores (unbounded) and cosines ([−1, 1]) combine without calibration.
+    c = 60 (Cormack, Clarke & Büttcher, 2009) damps the gap between ranks 1 and 2 so
+    that no single retriever dominates. It's fixed, not tuned.
+
+    All arrays must have the same shape (N,); raise ValueError otherwise, or if
+    ``score_arrays`` is empty.
+    """
+    raise NotImplementedError

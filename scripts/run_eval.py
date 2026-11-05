@@ -13,7 +13,7 @@ import argparse
 import time
 
 import pandas as pd
-from _setup import RESULTS, as_float, bm25_score_fn, dense_score_fn, load_setup
+from _setup import RESULTS, as_float, bm25_score_fn, dense_score_fn, hybrid_score_fn, load_setup
 
 from rtm.evaluate import paired_bootstrap, run, summarize
 
@@ -23,10 +23,10 @@ COMPARE = ("ndcg", "recall_capped", "mrr")
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
-    parser.add_argument("--models", nargs="+", default=["bm25", "minilm", "mpnet"],
-                        choices=["bm25", "minilm", "mpnet"])
-    parser.add_argument("--k1", type=float, default=1.5)
-    parser.add_argument("--b", type=float, default=0.75)
+    parser.add_argument("--models", nargs="+", default=["bm25", "minilm", "mpnet", "hybrid"],
+                        choices=["bm25", "minilm", "mpnet", "hybrid"])
+    parser.add_argument("--k1", type=float, default=0.4)   # tuned on dev, 2026-11-05
+    parser.add_argument("--b", type=float, default=1.0)
     args = parser.parse_args()
 
     s = load_setup()
@@ -34,8 +34,12 @@ def main() -> None:
     RESULTS.mkdir(exist_ok=True)
     results = {}
     for model in args.models:
-        score_fn = (bm25_score_fn(s.verses, args.k1, args.b) if model == "bm25"
-                    else dense_score_fn(s.verses, model))
+        if model == "bm25":
+            score_fn = bm25_score_fn(s.verses, args.k1, args.b)
+        elif model == "hybrid":
+            score_fn = hybrid_score_fn(s.verses, args.k1, args.b)
+        else:
+            score_fn = dense_score_fn(s.verses, model)
         start = time.perf_counter()
         results[model] = run(score_fn, queries, s.verses, s.qrels, s.judged)
         results[model].to_csv(RESULTS / f"{args.split}_{model}.csv", index=False)

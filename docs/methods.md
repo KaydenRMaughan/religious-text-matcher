@@ -211,6 +211,17 @@ needs no score calibration between models. It beat BM25 at every vote cut, with 
 interval excluding 0 (+0.014, +0.008, +0.024 at ≥ 3, ≥ 5, ≥ 10). This was exploratory,
 run to decide whether a hybrid is worth adding, and it isn't yet part of the protocol.
 
+### Reported results (test split, run once)
+
+| Model | Capped recall@10 | MRR@10 | nDCG@10 | Δ nDCG vs BM25 [95% CI] |
+|---|---|---|---|---|
+| BM25, stemmed (k₁ 0.4, b 1.0) | 0.233 | 0.354 | 0.215 | — |
+| MiniLM | 0.177 | 0.282 | 0.163 | −0.051 [−0.060, −0.042] |
+| mpnet | 0.181 | 0.296 | 0.170 | −0.044 [−0.055, −0.034] |
+| BM25 + mpnet, RRF | pending | | | |
+
+Test reproduces dev to within 0.002 nDCG, so the dev tuning didn't overfit.
+
 ## 10. Limitations so far
 
 - **The labels reward wording.** Results measure agreement with a concordance-style

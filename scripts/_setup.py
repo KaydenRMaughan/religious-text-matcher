@@ -56,5 +56,13 @@ def bm25_score_fn(verses: pd.DataFrame, k1: float, b: float, tokens=None):
     return lambda q: bm25.scores(tokenize(q, stem=True))
 
 
+def hybrid_score_fn(verses: pd.DataFrame, k1: float, b: float):
+    """BM25 + mpnet, fused by reciprocal rank (rtm.retrieve.rrf_scores)."""
+    from rtm.retrieve import rrf_scores
+
+    bm25, mpnet = bm25_score_fn(verses, k1, b), dense_score_fn(verses, "mpnet")
+    return lambda q: rrf_scores([bm25(q), mpnet(q)])
+
+
 def as_float(x) -> float:
     return float(np.asarray(x))
