@@ -23,7 +23,7 @@ PRIVATE_CACHE = REPO_ROOT / "data" / "private" / "embeddings"
 PUBLIC_SOURCES = ("Old Testament", "New Testament", "Book of Mormon")
 METHODS = ("hybrid", "bm25", "mpnet", "minilm")
 K1, B = 0.4, 1.0  # tuned on public dev, 2026-11-05
-BOOST_DELTA = 0.0  # Book of Mormon margin in hybrid (RRF) units; set from private dev tuning
+BOOST_DELTA = 0.0006  # Book of Mormon margin in hybrid (RRF) units; sized on the parallels (scripts/boost_parallels.py), 2026-11-06
 
 
 def unit_vectors(texts: list[str], sources: list[str], key: str) -> np.ndarray:

@@ -32,7 +32,8 @@ query text ──> retriever (BM25 | MiniLM | mpnet) ──> ranked verses ─�
 | Private evaluation | `scripts/run_private_eval.py` | Built; results private | Claude (protocol: Kayden) |
 | Chapter task | `scripts/run_chapter_eval.py` | Built | Claude (protocol: Kayden) |
 | Search engine | `src/rtm/search.py` | Done, 5 tests | Claude |
-| App | `app/app.py` | Built | Claude |
+| Boost sizing | `scripts/boost_parallels.py` | Done: δ = 0.0006 (Kayden's choice) | Claude (choice: Kayden) |
+| App | `app/app.py` | Done: launched and checked 2026-11-06 | Claude |
 
 ## Data
 
@@ -83,9 +84,12 @@ For a query with relevant set *R* and ranked list *L*:
    - *Scoring (8a):* Book of Mormon results are unjudged by OpenBible, so they're dropped from the ranked list before the Bible metrics are computed (condensed lists, Sakai 2007). Each model's Book of Mormon share of the top 10 is reported separately. Book of Mormon accuracy is measured on the private talk-citation labels.
    - *Preference (8b):* a score boost for Book of Mormon verses, sized to win when scores are close: 2 Nephi 12 should outrank Isaiah 2, which it quotes. A source boost never changes the order of Bible verses among themselves, so it leaves the condensed Bible metrics untouched.
 
+## Settled at the app stage (2026-11-06)
+
+- **8b. Boost:** additive δ = 0.0006 on the hybrid's RRF scores, sized on 445 aligned parallel verse pairs. It flips word-for-word twins anywhere in the top 10 and raises the Book of Mormon share of the top 10 from 11.1% to 12.6%. On private dev, any δ > 0 lowered nDCG; the boost is a stated preference. See decisions.md.
+- **6a, 6b:** done. The chapter task results are public (README); the private test results are in `results/private/` and stay private.
+
 ## Open decisions
 
-- **8b. Boost form and size** (Kayden's, at the app stage). Additive on cosine (a fixed margin, e.g. +0.02) or multiplicative (BM25 scores have no fixed scale). Size it on the known parallels as a public check: 2 Ne 12–24 ↔ Isa 2–14, 1 Ne 20–21 ↔ Isa 48–49, Mosiah 14 ↔ Isa 53, 3 Ne 22 ↔ Isa 54, 3 Ne 12–14 ↔ Matt 5–7. The boost should lift the parallel above its source without flooding unrelated queries with Book of Mormon verses (check the top-10 share).
-- **6a. The chapter task:** query unit, relevance definition (e.g. a chapter is relevant if it holds a ≥ 5-vote target), and chunk size.
-- **6b. The private test:** parsing citations like `Ex. 17:9–13` and `D&C 27:15, 17` into ids (Claude). Source and terms for the private D&C text still to check; Pearl of Great Price citations are dropped unless added the same way.
-- **Budget.** Raised from 10–12 to 15–19 hrs on 2026-10-30 (confirmed) for decisions 6 and 8; 4 hrs logged.
+- None in the data science. Remaining work is shipping: merge `feat/private-test`, the Writing post, the resume bullet, repo hygiene, and flipping the repo public.
+- **Budget.** 15–19 hrs; about 13.5 logged as of 2026-11-06.

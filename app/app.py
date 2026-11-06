@@ -36,7 +36,9 @@ def scripture_index() -> Index:
         path = REPO_ROOT / private[key] if key in private else None
         if path and Path(path).exists():
             frames.append(load_scriptures_json(path, source, book_id))
-    return Index(pd.concat(frames, ignore_index=True))
+    index = Index(pd.concat(frames, ignore_index=True))
+    index.scores("warm up", "hybrid")  # load mpnet and the cached vectors now, not on the first search
+    return index
 
 
 @st.cache_resource(show_spinner="Loading talks…")
@@ -67,7 +69,7 @@ def main() -> None:
         if target == "Scripture verses" and BOOST_DELTA:
             prefer_bom = st.toggle(
                 "Prefer the Book of Mormon when close", value=True, disabled=method != "hybrid",
-                help="Adds a small, evaluated margin to Book of Mormon verses in the hybrid "
+                help="Adds a small margin, sized on the known parallels, to Book of Mormon verses in the hybrid "
                      "ranking, so a Book of Mormon parallel (2 Nephi 12) edges out its "
                      "source (Isaiah 2) when the two are near-equal.")
         k = st.slider("Results", 5, 50, 10, step=5)
