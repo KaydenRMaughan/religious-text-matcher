@@ -133,6 +133,18 @@ class BM25:
             scores[idx] += idf * f * (self.k1 + 1) / (f + self.norm[idx])
         return scores
 
+    def scores_counted(self, query: list[str]) -> np.ndarray:
+        """Same result as ``scores``, but each distinct query term is computed once and
+        weighted by its count (Claude, 2026-11-05). For long queries: a 2,000-token talk
+        has ~600 distinct terms, so this is ~3x faster."""
+        scores = np.zeros(self.N, dtype=float)
+        for term, count in collections.Counter(query).items():
+            if term not in self.inverted_index:
+                continue
+            idx, f = self.inverted_index[term]
+            scores[idx] += count * self.idf(term) * f * (self.k1 + 1) / (f + self.norm[idx])
+        return scores
+
 
 def l2_normalize(x: np.ndarray) -> np.ndarray:
     """Scale each row of ``x`` to unit L2 length, as float64; a 1-D ``x`` is one vector.
@@ -188,3 +200,28 @@ def rrf_scores(score_arrays: Sequence[np.ndarray], c: float = 60.0) -> np.ndarra
     for i, scores in enumerate(score_arrays):
         ranks[i] = np.argsort(np.argsort(-scores, kind="stable")) + 1  # 1-based
     return np.sum(1 / (c + ranks), axis=0)
+
+
+# Drafted by Claude (2026-11-05) at Kayden's go-ahead; see docs/methods.md, section 11.
+
+def max_pool_scores(retriever: DenseRetriever, chunk_vectors: np.ndarray) -> np.ndarray:
+    """Score documents against a long query split into chunks: each document's best chunk.
+
+        score(d) = max_i cos(c_i, d)
+
+    ``chunk_vectors`` has shape (n_chunks, dim). One matrix product gives every
+    chunk-document cosine, (n_chunks, N); the max over chunks keeps, for each document,
+    the passage of the query it matches best. Long queries aren't diluted by passages
+    unrelated to that document, the way a single averaged embedding would be.
+    """
+    chunk_vectors = np.atleast_2d(chunk_vectors)
+    if chunk_vectors.shape[0] == 0:
+        raise ValueError("no chunks to score")
+    return (l2_normalize(chunk_vectors) @ retriever.docs.T).max(axis=0)
+
+
+def boost(scores: np.ndarray, mask: np.ndarray, delta: float) -> np.ndarray:
+    """Add ``delta`` to the scores where ``mask`` is True (decision 8b: prefer Book of
+    Mormon verses when scores are close). ``delta`` is in the units of ``scores``, so a
+    hybrid's RRF scores (about 1/61 at rank 1) need a far smaller delta than cosines."""
+    return np.asarray(scores, dtype=float) + delta * np.asarray(mask, dtype=bool)

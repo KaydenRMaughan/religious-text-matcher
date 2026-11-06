@@ -211,3 +211,33 @@ def test_rrf_rejects_bad_input():
         rrf_scores([])
     with pytest.raises(ValueError):
         rrf_scores([np.zeros(3), np.zeros(4)])
+
+
+# --- max-pooling and boost ---------------------------------------------------------------
+
+from rtm.retrieve import boost, max_pool_scores  # noqa: E402
+
+
+def test_max_pool_takes_each_documents_best_chunk():
+    r = DenseRetriever(np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]))
+    chunks = np.array([[1.0, 0.0], [0.0, 3.0]])
+    np.testing.assert_allclose(max_pool_scores(r, chunks), [1.0, 1.0, 1 / np.sqrt(2)])
+
+
+def test_max_pool_single_chunk_equals_plain_scores():
+    r = DenseRetriever(VECS)
+    q = np.array([2.0, -1.0])
+    np.testing.assert_allclose(max_pool_scores(r, q[None, :]), r.scores(q))
+    with pytest.raises(ValueError):
+        max_pool_scores(r, np.zeros((0, 2)))
+
+
+def test_boost_adds_delta_only_where_masked():
+    np.testing.assert_allclose(boost(np.array([1.0, 2.0, 3.0]), [True, False, True], 0.5),
+                               [1.5, 2.0, 3.5])
+
+
+def test_scores_counted_matches_scores():
+    bm = BM25(DOCS, k1=0.4, b=1.0)
+    q = ["the", "lord", "lord", "thy", "thy", "thy", "unknownword"]
+    np.testing.assert_allclose(bm.scores_counted(q), bm.scores(q), rtol=1e-12)

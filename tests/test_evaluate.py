@@ -218,3 +218,18 @@ def test_grid_search_rejects_unknown_metric():
     with pytest.raises(ValueError):
         grid_search(lambda: (lambda q: np.zeros(5)), {}, ["Gen.1.1"], verses, qrels, judged,
                     metric="accuracy")
+
+
+def test_run_with_external_queries_and_exclusions():
+    verses = pd.DataFrame({"id": ["a", "b", "c"], "text": ["x y", "y", "z"]})
+    qrels = {1: {"q1": {"b": 1}}}
+
+    def score_fn(q):
+        return np.array([len(set(q.split()) & set(t.split())) for t in verses["text"]], float)
+
+    r = run(score_fn, ["q1"], verses, qrels, {"a", "b", "c"}, k=1,
+            query_text={"q1": "x y"})
+    assert r.loc[0, "mrr"] == 0.0            # "a" (2 shared words) outranks "b"
+    r = run(score_fn, ["q1"], verses, qrels, {"a", "b", "c"}, k=1,
+            query_text={"q1": "x y"}, exclude={"q1": {"a"}})
+    assert r.loc[0, "mrr"] == 1.0            # with "a" excluded, "b" is first

@@ -168,6 +168,7 @@ def grid_search(
     judged: Collection[str],
     metric: str = "ndcg",
     cut: int = PRIMARY_CUT,
+    **run_kwargs,
 ) -> pd.DataFrame:
     """Score every combination of ``grid`` on the dev queries; best first.
 
@@ -181,6 +182,8 @@ def grid_search(
     sort), so the first row is reproducible. Raise ValueError for an unknown metric.
 
     Dev queries only: tuning on test would leak into the reported numbers (decision 3).
+    ``run_kwargs`` pass through to ``run`` (``query_text``, ``exclude``; added by
+    Claude for the private and chapter tasks).
     """
     if metric not in METRICS:
         raise ValueError(f"unknown metric {metric!r}; expected one of {METRICS}")
@@ -188,7 +191,8 @@ def grid_search(
     rows = []
     for values in itertools.product(*(grid[n] for n in names)):
         params = dict(zip(names, values))
-        results = run(make_score_fn(**params), query_ids, verses, {cut: qrels[cut]}, judged)
+        results = run(make_score_fn(**params), query_ids, verses, {cut: qrels[cut]}, judged,
+                      **run_kwargs)
         rows.append({**params, metric: results[metric].mean(), "n_queries": len(results)})
     table = pd.DataFrame(rows, columns=[*names, metric, "n_queries"])
     return table.sort_values(metric, ascending=False, kind="stable").reset_index(drop=True)
@@ -219,20 +223,28 @@ def run(
     qrels: Mapping[int, Mapping[str, Mapping[str, int]]],
     judged: Collection[str],
     k: int = 10,
+    query_text: Mapping[str, str] | None = None,
+    exclude: Mapping[str, Collection[str]] | None = None,
 ) -> pd.DataFrame:
     """Score every query at every vote cut. One row per (query, cut) with METRICS.
 
-    ``score_fn`` maps query text to one score per row of ``verses``. ``qrels`` maps
-    each vote cut to its labels; a query with no labels at a cut is skipped there.
-    Ties break by corpus order, so runs are reproducible.
+    ``score_fn`` maps query text to one score per row of ``verses`` (the documents).
+    ``qrels`` maps each vote cut to its labels; a query with no labels at a cut is
+    skipped there. Ties break by corpus order, so runs are reproducible.
+
+    By default queries are rows of ``verses``. ``query_text`` supplies query text from
+    elsewhere (talks as queries over verses). ``exclude`` lists, per query, documents to
+    drop before scoring (the query verse's own chapter in the chapter task).
     """
-    text = verses.set_index("id")["text"]
+    text = query_text if query_text is not None else verses.set_index("id")["text"]
     ids = verses["id"].to_numpy()
     judged = set(judged)
+    exclude = exclude or {}
     rows = []
     for qid in query_ids:
         scores = np.asarray(score_fn(text[qid]), dtype=float)
-        ranked = ids[_top_m(scores, TOP_M)].tolist()
+        drop = exclude.get(qid, ())
+        ranked = [d for d in ids[_top_m(scores, TOP_M + len(drop))].tolist() if d not in drop]
         for cut, labels in qrels.items():
             if qid in labels:
                 rows.append({"query_id": qid, "min_votes": cut,

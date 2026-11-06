@@ -97,3 +97,42 @@ Run on the 2,000 dev queries with the Tutorial 3 functions (drafted by Claude at
 ## 2026-11-05: BYU Scripture Citation Index: acknowledged, not used
 
 Kayden decided not to use [scriptures.byu.edu](https://scriptures.byu.edu/) as data: it states no terms of use and offers no bulk access, and its citations come from the same talk footnotes our labels already use. The README and app must acknowledge it, though. It's the established tool for looking up which talks cite a given verse. This project does the reverse: given any passage, including new text that no index has seen, it finds related scripture by content.
+
+## 2026-11-05: Chapter task results (public, test split)
+
+Verse queries against the 1,189 Bible chapters (median 627 words). A chapter is relevant if it holds a ≥ 5-vote target, excluding the query's own chapter. 1,956 test queries at ≥ 5.
+
+**Chunking beats truncation for both models, at every cut** (nDCG@10 at ≥ 5): MiniLM 0.102 → 0.155, +0.054 [+0.045, +0.063]. mpnet 0.122 → 0.160, +0.038 [+0.029, +0.047]. MiniLM gains more because its 256-token window truncates more of each chapter than mpnet's 384. This confirms the prototype audit's main finding with public data.
+
+**BM25 is stronger still on chapters** (0.264). The hybrid doesn't beat it here: −0.014 [−0.024, −0.005] at ≥ 5, −0.012 at ≥ 3, and +0.007 (interval spans 0) at ≥ 10. With a partner this much weaker, equal-weight fusion costs a little. The hybrid's advantage holds for verse retrieval, not chapter retrieval. The README states both.
+
+## 2026-11-06: Book of Mormon boost set to 0.0006 (decision 8b closed)
+
+**Form:** additive, on the hybrid's RRF scores, after fusion. **Size: δ = 0.0006**, chosen by Kayden from the known parallels only (`scripts/boost_parallels.py`, public data).
+
+The parallel chapters (2 Ne 12–24 ↔ Isa 2–14, 1 Ne 20–21 ↔ Isa 48–49, Mosiah 14 ↔ Isa 53, 3 Ne 22 ↔ Isa 54, 3 Ne 12–14 ↔ Matt 5–7) align into 445 verse pairs on stemmed-token Jaccard ≥ 0.5. The median Jaccard is 1.00: most are word-for-word twins. The test cases are 4,468 (query, pair) cases, using queries OpenBible links (≥ 5 votes) to the Bible side, with queries from the parallel chapters excluded.
+
+| δ | Book of Mormon ahead of its source | …when the source is in the top 10 | Book of Mormon share of the top 10 (public dev) |
+|---|---|---|---|
+| 0 | 43% | 30% | 11.1% |
+| 0.0003 | 80% | 46% | 12.0% |
+| 0.0005 | 85% | 58% | 12.6% |
+| 0.001 | 90% | 72% | 14.2% |
+| 0.002 | 94% | 83% | 17.6% |
+
+**Why so small a margin still matters.** Twins get identical BM25 and cosine scores, so the tie is broken by corpus order and the Bible verse wins. RRF then turns the tie into adjacent ranks in both lists, and flipping a pair at rank r takes δ > 2 / ((60 + r)(61 + r)): about 0.00054 at rank 1 and 0.0004 at rank 10. At 0.0006, twins flip anywhere in the top 10, and the Book of Mormon share of the top 10 rises by about 1.5 points.
+
+**Private dev, for the record (not used to choose):** every δ > 0 lowered nDCG@10 on the talk-citation labels (best at δ = 0). The preference is a stated product choice, not something either label set rewards.
+
+**Alternative considered:** a tie-break before fusion (no flooding at all, but near-twins not guaranteed to flip). Not taken.
+
+## 2026-11-06: App launched; README rewritten
+
+- **App:** `streamlit run app/app.py`. The hybrid is the default, and the boost toggle is on by default for the hybrid only. The model warm-up moved into the cached index load (cold start about 27 s; searches then take under 0.1 s). The private talks search reuses the eval's cached mpnet passage vectors (24,561 passages, cache hit), so it doesn't re-encode.
+- **README:** rewritten around the results. Embeddings alone lose to BM25 on these labels and the hybrid wins on verses. Chunking wins on long documents, where BM25 leads. The private test is described by method only, with no numbers. The BYU Scripture Citation Index is acknowledged. The old "meaning, not keywords" framing is gone.
+
+## 2026-11-06: Explaining the methods in the app
+
+Kayden asked that the app itself explain why the methods give different results. Added: a plain-language description under the Method selector (how it works, what it's good for, what it misses), a score definition above each result list (the scales aren't comparable: one verse scored 28.3 in BM25, 0.878 in mpnet and 0.0328 in the hybrid), a **Compare all methods** view (four columns, with each result marked as found by all four methods, by two or three, or by one only), and a "Why do the methods give different results?" explainer built on real examples from the app.
+
+**Found while writing it (open for Kayden):** on modern-language questions the hybrid is often worse than mpnet alone. For "God will never abandon me", the hybrid's #1 is Judges 10:13; for "I feel anxious about the future", it's Genesis 27:12. In both, BM25's incidental word matches pull the fused list off topic. The evaluation queries were all scripture verses, so it doesn't measure this case. The app still defaults to the hybrid; the explainer says to try Meaning for questions in your own words.
