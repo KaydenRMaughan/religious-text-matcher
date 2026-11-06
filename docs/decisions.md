@@ -130,3 +130,9 @@ The parallel chapters (2 Ne 12–24 ↔ Isa 2–14, 1 Ne 20–21 ↔ Isa 48–49
 
 - **App:** `streamlit run app/app.py`. The hybrid is the default, and the boost toggle is on by default for the hybrid only. The model warm-up moved into the cached index load (cold start about 27 s; searches then take under 0.1 s). The private talks search reuses the eval's cached mpnet passage vectors (24,561 passages, cache hit), so it doesn't re-encode.
 - **README:** rewritten around the results. Embeddings alone lose to BM25 on these labels and the hybrid wins on verses. Chunking wins on long documents, where BM25 leads. The private test is described by method only, with no numbers. The BYU Scripture Citation Index is acknowledged. The old "meaning, not keywords" framing is gone.
+
+## 2026-11-06: Explaining the methods in the app
+
+Kayden asked that the app itself explain why the methods give different results. Added: a plain-language description under the Method selector (how it works, what it's good for, what it misses), a score definition above each result list (the scales aren't comparable: one verse scored 28.3 in BM25, 0.878 in mpnet and 0.0328 in the hybrid), a **Compare all methods** view (four columns, with each result marked as found by all four methods, by two or three, or by one only), and a "Why do the methods give different results?" explainer built on real examples from the app.
+
+**Found while writing it (open for Kayden):** on modern-language questions the hybrid is often worse than mpnet alone. For "God will never abandon me", the hybrid's #1 is Judges 10:13; for "I feel anxious about the future", it's Genesis 27:12. In both, BM25's incidental word matches pull the fused list off topic. The evaluation queries were all scripture verses, so it doesn't measure this case. The app still defaults to the hybrid; the explainer says to try Meaning for questions in your own words.
