@@ -97,3 +97,11 @@ Run on the 2,000 dev queries with the Tutorial 3 functions (drafted by Claude at
 ## 2026-11-05: BYU Scripture Citation Index: acknowledged, not used
 
 Kayden decided not to use [scriptures.byu.edu](https://scriptures.byu.edu/) as data: it states no terms of use and offers no bulk access, and its citations come from the same talk footnotes our labels already use. The README and app must acknowledge it, though. It's the established tool for looking up which talks cite a given verse. This project does the reverse: given any passage, including new text that no index has seen, it finds related scripture by content.
+
+## 2026-11-05: Chapter task results (public, test split)
+
+Verse queries against the 1,189 Bible chapters (median 627 words). A chapter is relevant if it holds a ≥ 5-vote target, excluding the query's own chapter. 1,956 test queries at ≥ 5.
+
+**Chunking beats truncation for both models, at every cut** (nDCG@10 at ≥ 5): MiniLM 0.102 → 0.155, +0.054 [+0.045, +0.063]. mpnet 0.122 → 0.160, +0.038 [+0.029, +0.047]. MiniLM gains more because its 256-token window truncates more of each chapter than mpnet's 384. This confirms the prototype audit's main finding with public data.
+
+**BM25 is stronger still on chapters** (0.264). The hybrid doesn't beat it here: −0.014 [−0.024, −0.005] at ≥ 5, −0.012 at ≥ 3, and +0.007 (interval spans 0) at ≥ 10. With a partner this much weaker, equal-weight fusion costs a little. The hybrid's advantage holds for verse retrieval, not chapter retrieval. The README states both.

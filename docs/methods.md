@@ -268,6 +268,20 @@ relevant if it holds a ≥ 5-vote target of the query, excluding the query's own
 It compares truncated chapter embeddings with chunked ones, plus BM25 and the hybrid.
 Nothing is tuned on it, so test is reported directly.
 
+### Chapter task results (test, votes ≥ 5)
+
+| Model | nDCG@10 | Chunked − truncated [95% CI] |
+|---|---|---|
+| BM25 | 0.264 | — |
+| MiniLM, truncated / chunked | 0.102 / 0.155 | +0.054 [+0.045, +0.063] |
+| mpnet, truncated / chunked | 0.122 / 0.160 | +0.038 [+0.029, +0.047] |
+| Hybrid (BM25 + mpnet chunked) | 0.250 | vs BM25: −0.014 [−0.024, −0.005] |
+
+Chunking is a large, clear gain for long documents. On chapters, though, BM25 leads by
+more than on verses, and equal-weight fusion with the much weaker embedding ranking
+costs a little. A weighted fusion might recover it. That isn't explored here, to avoid
+tuning on a reported set.
+
 ## 10. Limitations so far
 
 - **The labels reward wording.** Results measure agreement with a concordance-style
