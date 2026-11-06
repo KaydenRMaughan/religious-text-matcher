@@ -26,7 +26,7 @@ query text ──> retriever (BM25 | MiniLM | mpnet) ──> ranked verses ─�
 | Metrics | `src/rtm/metrics.py` | Done | **Kayden** |
 | Evaluation protocol | `src/rtm/evaluate.py` | Spec and failing tests; runner done (`scripts/run_eval.py`) | **Kayden** (Claude: the batch runner) |
 | Embedding retrievers | `src/rtm/retrieve.py`, `src/rtm/embed.py` | Spec and failing tests; encoding and cache done | **Kayden** (Claude: model loading and caching) |
-| Citation parser (private test) | `src/rtm/citations.py` | Done, 11 tests; resolves 50,229 cited verses in 2,211 talks | Claude |
+| Citation parser (private test) | `src/rtm/citations.py` | Done, 11 tests; resolves 53,060 cited verses in 2,220 talks once the Pearl of Great Price is loaded | Claude |
 | Chunker | `src/rtm/chunk.py` | Done, 6 tests | Claude |
 | Max-pool and boost | `src/rtm/retrieve.py` | Done (drafted by Claude for review) | **Kayden** |
 | Private evaluation | `scripts/run_private_eval.py` | Built; results private | Claude (protocol: Kayden) |
@@ -91,5 +91,5 @@ For a query with relevant set *R* and ranked list *L*:
 
 ## Open decisions
 
-- None in the data science. Remaining work is shipping: merge `feat/private-test`, the Writing post, the resume bullet, repo hygiene, and flipping the repo public.
+- None in the data science. `feat/private-test` merged to `main` 2026-11-06 (`3bf29ed`). Remaining work is shipping: Kayden's review of the Writing post draft (site repo, `writing/posts/religious-text-matcher/`) and the resume bullet, evidence-bank sync, repo hygiene, and flipping the repo public.
 - **Budget.** 15–19 hrs; about 13.5 logged as of 2026-11-06.
