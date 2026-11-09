@@ -4,6 +4,10 @@ Paste a passage, a paragraph from a talk, or a question, and find the scripture 
 
 The goal is to find the scripture closest in *meaning* to a piece of text. The only large set of human judgments available, a crowd-voted list of Bible cross-references, mostly rewards shared *wording*. On it, keyword search beats the embedding models. In hands-on use, the meaning-based methods give the more useful matches. The evaluation below measures what it can and states plainly what it can't.
 
+![The compare-all view: keyword search ranks 1 Nephi 17:34 first on the shared word "choice"; the meaning-based methods rank by idea.](docs/app.png)
+
+Write-up: [The benchmark said keywords. Using the tool said meaning.](https://kaydenrmaughan.github.io/writing/posts/religious-text-matcher/)
+
 ## Results
 
 **Task 1: verse → related verses.** 2,000 held-out query verses, scored against OpenBible.info cross-references with at least 5 votes. Test split, run once after all tuning was done on a separate 2,000-query dev split.
