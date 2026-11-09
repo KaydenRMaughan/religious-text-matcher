@@ -2,7 +2,7 @@
 
 Paste a passage, a paragraph from a talk, or a question, and find the scripture most related to it. Search runs over the King James Bible and the Book of Mormon, by shared wording, by meaning, or by both combined.
 
-The point of the project is the evaluation, not the demo. Each retrieval method was measured against human-curated cross-references on held-out queries. The results turned out differently than the usual "embeddings beat keywords" story.
+The goal is to find the scripture closest in *meaning* to a piece of text. The only large set of human judgments available, a crowd-voted list of Bible cross-references, mostly rewards shared *wording*. On it, keyword search beats the embedding models. In hands-on use, the meaning-based methods give the more useful matches. The evaluation below measures what it can and states plainly what it can't.
 
 ## Results
 
@@ -17,7 +17,9 @@ The point of the project is the evaluation, not the demo. Each retrieval method 
 
 The hybrid beats BM25 by +0.011 nDCG@10 (95% paired-bootstrap interval +0.004 to +0.019) and +0.018 capped recall (+0.008 to +0.027). Both gains hold at the 3-vote and 10-vote relevance cuts as well. Each embedding model on its own trails BM25 at every cut and on every metric, and every one of those intervals excludes zero.
 
-**Why keywords win here.** The labels are lexical. 47% of labeled pairs share a rare word, compared with 4% of random verse pairs. That's because the cross-references descend from a concordance-style 19th-century reference work. The embedding models were also trained on modern English, not KJV prose. On the links with no shared rare word, mpnet's recall is 2.3× BM25's, but every model is near zero there. The fair reading: on this benchmark, meaning-based retrieval adds signal *on top of* keywords rather than replacing them.
+**Why keywords win on this benchmark.** The labels are lexical. 47% of labeled pairs share a rare word, compared with 4% of random verse pairs. That's because the cross-references descend from a concordance-style 19th-century reference work. The embedding models were also trained on modern English, not KJV prose. On the links with no shared rare word, mpnet's recall is 2.3× BM25's, but every model is near zero there. The fair reading: on this benchmark, meaning-based retrieval adds signal *on top of* keywords rather than replacing them.
+
+**In practice.** For the project's real goal, matching by meaning, the meaning-based methods (mpnet and the hybrid) return the more useful results in hands-on use, especially for modern-language text. That's an observation, not a measured result: no labeled set for meaning-level relevance exists here yet. The app defaults to the hybrid, which uses both signals and scored best on the benchmark, and lists keyword-only search last.
 
 **Task 2: verse → related chapter (long documents).** The same queries against all 1,189 Bible chapters (median 627 words, well past the models' 256- and 384-token windows). A chapter counts as relevant if it holds a ≥ 5-vote target.
 

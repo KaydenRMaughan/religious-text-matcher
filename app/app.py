@@ -20,9 +20,9 @@ st.set_page_config(page_title="Religious Text Matcher", page_icon="📖", layout
 
 METHOD_LABELS = {
     "hybrid": "Hybrid: keywords + meaning",
-    "bm25": "Keywords (BM25)",
     "mpnet": "Meaning (mpnet)",
     "minilm": "Meaning, faster (MiniLM)",
+    "bm25": "Keywords (BM25)",
 }
 
 # What each method does, in plain terms, and what its score means.
