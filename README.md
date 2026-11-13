@@ -85,6 +85,8 @@ python scripts/fetch_data.py
 streamlit run app/app.py
 ```
 
+On Windows, after setup, `launch.bat` starts the app on port 8520 (a desktop shortcut to it works too).
+
 To reproduce the evaluation: `python scripts/run_eval.py --split test` (verse task), `python scripts/run_chapter_eval.py` (chapter task) and `python scripts/boost_parallels.py` (boost sizing). The first run embeds the corpus and caches the vectors.
 
 ## Stack
